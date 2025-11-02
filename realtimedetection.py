@@ -7,6 +7,10 @@ import keras
 from PIL import Image
 from streamlit_webrtc import webrtc_streamer, WebRtcMode, RTCConfiguration, VideoProcessorBase
 import av
+import asyncio
+import nest_asyncio
+nest_asyncio.apply()
+
 
 
 # ------------------------------------------------------------
