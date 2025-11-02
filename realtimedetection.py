@@ -2,16 +2,10 @@ import streamlit as st
 import cv2
 import numpy as np
 from keras.models import model_from_json, Sequential
-from keras.layers import Conv2D, Dense, Flatten
 import keras
 from PIL import Image
-from streamlit_webrtc import webrtc_streamer, WebRtcMode, RTCConfiguration, VideoProcessorBase
-import av
-import asyncio
-import nest_asyncio
-nest_asyncio.apply()
-
-
+import tempfile
+import time
 
 # ------------------------------------------------------------
 # Page Configuration
@@ -22,21 +16,28 @@ st.set_page_config(
     layout="wide"
 )
 
-# Register Sequential for backward compatibility
-keras.utils.get_custom_objects().update({"Sequential": Sequential})
-
+st.title("😊 Facial Emotion Detection System")
+st.markdown("---")
 
 # ------------------------------------------------------------
-# Load Model and Face Cascade
+# Keras Compatibility
+# ------------------------------------------------------------
+keras.utils.get_custom_objects().update({"Sequential": Sequential})
+
+# ------------------------------------------------------------
+# Load Model and Haar Cascade
 # ------------------------------------------------------------
 @st.cache_resource
 def load_emotion_model():
-    with open("facialemotionmodel.json", "r") as json_file:
-        model_json = json_file.read()
-    model = model_from_json(model_json)
-    model.load_weights("facialemotionmodel.h5")
-    return model
-
+    try:
+        with open("facialemotionmodel.json", "r") as json_file:
+            model_json = json_file.read()
+        model = model_from_json(model_json)
+        model.load_weights("facialemotionmodel.h5")
+        return model
+    except Exception as e:
+        st.error(f"Error loading model: {e}")
+        st.stop()
 
 @st.cache_resource
 def load_face_cascade():
@@ -48,8 +49,8 @@ def load_face_cascade():
         cascade = cv2.CascadeClassifier(haar_file)
         if not cascade.empty():
             return cascade
-    raise FileNotFoundError("Could not find haarcascade_frontalface_default.xml.")
-
+    st.error("Could not find haarcascade_frontalface_default.xml.")
+    st.stop()
 
 # ------------------------------------------------------------
 # Helper Functions
@@ -58,7 +59,6 @@ def extract_features(image):
     feature = np.array(image)
     feature = feature.reshape(1, 48, 48, 1)
     return feature / 255.0
-
 
 def detect_emotion(image, model, face_cascade):
     labels = {
@@ -88,21 +88,16 @@ def detect_emotion(image, model, face_cascade):
 
         cv2.putText(
             image, f"{emotion} ({confidence:.1f}%)",
-            (x, y-10), cv2.FONT_HERSHEY_SIMPLEX,
+            (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX,
             0.9, (0, 255, 0), 2
         )
 
     return image, results
 
-
 # ------------------------------------------------------------
-# Streamlit UI
+# Main Function
 # ------------------------------------------------------------
 def main():
-    st.title("😊 Facial Emotion Detection System")
-    st.markdown("---")
-
-    # Sidebar
     st.sidebar.header("About")
     st.sidebar.info(
         "This application detects facial emotions in real-time using deep learning. "
@@ -113,18 +108,12 @@ def main():
         "- 😠 Angry\n- 🤢 Disgust\n- 😨 Fear\n- 😊 Happy\n- 😐 Neutral\n- 😢 Sad\n- 😲 Surprise"
     )
 
-    # Load Models
-    try:
-        model = load_emotion_model()
-        face_cascade = load_face_cascade()
-    except Exception as e:
-        st.error(f"Error loading model: {str(e)}")
-        st.stop()
+    model = load_emotion_model()
+    face_cascade = load_face_cascade()
 
-    # Mode Selection
-    mode = st.radio("Select Mode", ["Upload Image", "Webcam"], horizontal=True)
+    mode = st.radio("Select Mode", ["Upload Image", "Webcam (Local Only)"], horizontal=True)
 
-    # ---- Upload Image Mode ----
+    # ---------------- Upload Image Mode ----------------
     if mode == "Upload Image":
         st.subheader("📤 Upload an Image")
         uploaded_file = st.file_uploader("Choose an image...", type=['jpg', 'jpeg', 'png'])
@@ -156,31 +145,40 @@ def main():
             else:
                 st.warning("⚠️ No faces detected in the image")
 
-    # ---- Real-Time Webcam Mode ----
-    elif mode == "Webcam":
-        st.subheader("🎥 Live Emotion Detection")
-        st.info("Allow access to your webcam to see live emotion detection in action.")
+    # ---------------- Webcam Mode ----------------
+    elif mode == "Webcam (Local Only)":
+        st.subheader("🎥 Live Emotion Detection (Local Camera)")
 
-        class EmotionVideoProcessor(VideoProcessorBase):
-            def __init__(self):
-                self.model = load_emotion_model()
-                self.face_cascade = load_face_cascade()
+        st.info("👉 Note: Webcam mode works only on your local system. "
+                "If you're on Streamlit Cloud or Replit, use the Upload Image mode.")
 
-            def recv(self, frame):
-                img = frame.to_ndarray(format="bgr24")
-                processed_img, _ = detect_emotion(img, self.model, self.face_cascade)
-                return av.VideoFrame.from_ndarray(processed_img, format="bgr24")
+        start_btn = st.button("Start Camera")
 
-        webrtc_streamer(
-            key="emotion",
-            mode=WebRtcMode.SENDRECV,
-            video_processor_factory=EmotionVideoProcessor,
-            rtc_configuration=RTCConfiguration(
-                {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
-            ),
-            media_stream_constraints={"video": True, "audio": False},
-        )
+        if start_btn:
+            cap = cv2.VideoCapture(0)
+            stframe = st.empty()
 
+            if not cap.isOpened():
+                st.error("❌ Unable to access webcam. Check permissions or reconnect your camera.")
+                return
+
+            st.info("Press **Stop** or **Ctrl+C** to end the webcam.")
+
+            stop_btn = st.button("Stop")
+            while cap.isOpened() and not stop_btn:
+                ret, frame = cap.read()
+                if not ret:
+                    st.warning("Failed to read from webcam.")
+                    break
+
+                processed, results = detect_emotion(frame, model, face_cascade)
+                stframe.image(cv2.cvtColor(processed, cv2.COLOR_BGR2RGB), channels="RGB")
+
+                # Limit FPS to reduce CPU usage
+                time.sleep(0.1)
+
+            cap.release()
+            st.success("Webcam stopped.")
 
 # ------------------------------------------------------------
 if __name__ == "__main__":
