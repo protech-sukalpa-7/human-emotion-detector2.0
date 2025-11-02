@@ -1,18 +1,38 @@
-streamlit
+##############################
+# STREAMLIT EMOTION DETECTOR #
+##############################
+
+# --- Streamlit Core ---
+streamlit==1.51.0
 streamlit-webrtc==0.47.7
-opencv-python-headless
-tensorflow==2.20.0
-keras==3.10.0
-av==12.0.0
-nest_asyncio
-numpy
-pandas
-pillow
-scikit-learn
-tqdm
-joblib
-protobuf
-altair
-matplotlib
-aiortc
-aiohttp
+
+# --- Async and WebRTC Dependencies ---
+aiortc==1.9.0
+aiohttp==3.9.5
+nest_asyncio==1.6.0
+av==10.0.0  # newer versions (12.x) often break on Streamlit Cloud
+
+# --- Deep Learning ---
+tensorflow==2.17.0  # 2.20.0 breaks with current Keras on 3.12
+keras==3.4.1
+
+# --- Computer Vision ---
+opencv-python-headless==4.10.0.84
+pillow==10.4.0
+
+# --- Data Science Utilities ---
+numpy==1.26.4
+pandas==2.2.3
+scikit-learn==1.5.2
+tqdm==4.66.5
+joblib==1.4.2
+altair==5.4.1
+matplotlib==3.9.2
+
+# --- Protocol Buffers & Runtime ---
+protobuf==4.25.3
+
+# --- Build Safety ---
+pip==25.0
+setuptools>=68.0
+wheel>=0.43.0
