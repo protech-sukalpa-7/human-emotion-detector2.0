@@ -1,0 +1,5 @@
+pkg-config
+libavdevice-dev
+libavfilter-dev
+libopus-dev
+libvpx-dev
