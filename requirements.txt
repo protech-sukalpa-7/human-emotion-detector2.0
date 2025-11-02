@@ -15,4 +15,3 @@ protobuf
 altair
 matplotlib
 aiortc
-
