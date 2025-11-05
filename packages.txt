@@ -1,5 +1,2 @@
-pkg-config
-libavdevice-dev
-libavfilter-dev
-libopus-dev
-libvpx-dev
+libgl1
+libglib2.0-0
