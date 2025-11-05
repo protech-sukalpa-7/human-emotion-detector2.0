@@ -1,9 +1,9 @@
 streamlit
-streamlit-webrtc==0.47.7
+streamlit-webrtc
 opencv-python-headless
 tensorflow==2.20.0
 keras==3.10.0
-av==12.0.0
+av
 nest_asyncio
 numpy
 pandas
